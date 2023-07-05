@@ -1,14 +1,20 @@
 package controller
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
 
 	"github.com/joho/godotenv"
 )
+
+type Area struct {
+	AREA string
+}
 
 func getGoogleTrends() *http.Response {
 	err := godotenv.Load()
@@ -17,26 +23,51 @@ func getGoogleTrends() *http.Response {
 		os.Exit(1)
 	}
 
-	proxyURL, err := url.Parse(os.Getenv("PROXY_URL"))
+	// read json file to get tending data
+	content, err := ioutil.ReadFile("./area.json")
 	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+		log.Fatal("Read area.json failed error:", err)
 	}
 
-	transport := &http.Transport{
-		Proxy: http.ProxyURL(proxyURL),
+	// Now let's unmarshall the data into `payload`
+	var payload = make([]Area, 0)
+	err = json.Unmarshal(content, &payload)
+	if err != nil {
+		log.Fatal("json.Unmarshal() failed error:", err)
+	}
+
+	log.Printf("origin: %s\n", payload[1].AREA)
+
+	proxyURL := os.Getenv("PROXY_URL")
+	var transport *http.Transport
+
+	if proxyURL != "" {
+		proxyURL, err := url.Parse(proxyURL)
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+
+		transport = &http.Transport{
+			Proxy: http.ProxyURL(proxyURL),
+		}
+	} else {
+		transport = &http.Transport{}
 	}
 
 	client := &http.Client{
 		Transport: transport,
 	}
 
-	res, err := client.Get("https://trends.google.com/trends/trendingsearches/daily/rss?geo=US")
-	if err != nil {
-		fmt.Println(err.Error())
-		os.Exit(1)
+	for i := 0; i < len(payload); i++ {
+		res, err := client.Get(`https://trends.google.com/trends/trendingsearches/daily/rss?geo=` + payload[i].AREA)
+		if err != nil {
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+		return res
 	}
-	return res
+	return nil
 }
 
 func ReadGoogleTrends() []byte {
