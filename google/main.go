@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/FlareZone/trending/google/controller"
-	"github.com/FlareZone/trending/google/model"
+	"github.com/FlareZone/trending/controller"
+	"github.com/FlareZone/trending/model"
 )
 
 func main() {
