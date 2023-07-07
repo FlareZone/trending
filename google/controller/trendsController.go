@@ -1,10 +1,8 @@
 package controller
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,31 +10,17 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// Area area
 type Area struct {
 	AREA string
 }
 
-func getGoogleTrends() *http.Response {
+func getGoogleTrends(area string) *http.Response {
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file")
 		os.Exit(1)
 	}
-
-	// read json file to get tending data
-	content, err := ioutil.ReadFile("./area.json")
-	if err != nil {
-		log.Fatal("Read area.json failed error:", err)
-	}
-
-	// Now let's unmarshall the data into `payload`
-	var payload = make([]Area, 0)
-	err = json.Unmarshal(content, &payload)
-	if err != nil {
-		log.Fatal("json.Unmarshal() failed error:", err)
-	}
-
-	log.Printf("origin: %s\n", payload[1].AREA)
 
 	proxyURL := os.Getenv("PROXY_URL")
 	var transport *http.Transport
@@ -59,19 +43,18 @@ func getGoogleTrends() *http.Response {
 		Transport: transport,
 	}
 
-	for i := 0; i < len(payload); i++ {
-		res, err := client.Get(`https://trends.google.com/trends/trendingsearches/daily/rss?geo=` + payload[i].AREA)
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-		return res
+	res, err := client.Get(`https://trends.google.com/trends/trendingsearches/daily/rss?geo=` + area)
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(1)
 	}
-	return nil
+
+	return res
 }
 
-func ReadGoogleTrends() []byte {
-	results := getGoogleTrends()
+// ReadGoogleTrends get google trending news
+func ReadGoogleTrends(area string) []byte {
+	results := getGoogleTrends(area)
 	data, err := ioutil.ReadAll(results.Body)
 	if err != nil {
 		return nil
